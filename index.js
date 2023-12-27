@@ -10,7 +10,7 @@ const port = process.env.PORT || 5000;
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 // Database connection
-const uri = `mongodb+srv://rasel:rasel@cluster0.q37bxqk.mongodb.net/?retryWrites=true&w=majority`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.q37bxqk.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 function sendEmail({ mailInput, otpNumber }) {
     return new Promise((resolve, reject) => {
@@ -18,7 +18,7 @@ function sendEmail({ mailInput, otpNumber }) {
             service: "gmail",
             auth: {
                 user: 'raselmolla6336@gmail.com',
-                pass: 'ejrs itir aqpv qyun',
+                pass: process.env.app_pass,
             },
             secure: false,
         });
@@ -26,13 +26,13 @@ function sendEmail({ mailInput, otpNumber }) {
         const mail_configs = {
             from: 'raselmolla6336@gmail.com',
             to: mailInput,
-            subject: "PASSWORD RECOVERY",
+            subject: "Banao Social Media PASSWORD RECOVERY",
             html:
                 `<!DOCTYPE html>
             <html lang="en" >
             <head>
                 <meta charset="UTF-8">
-                <title>CodePen - OTP Email Template</title>
+                <title>Banao - OTP Email Template</title>
                 
             
             </head>
@@ -44,14 +44,13 @@ function sendEmail({ mailInput, otpNumber }) {
                     <a href="" style="font-size:1.4em;color: #00466a;text-decoration:none;font-weight:600">Koding 101</a>
                 </div>
                 <p style="font-size:1.1em">Hi,</p>
-                <p>Thank you for choosing Koding 101. Use the following OTP to complete your Password Recovery Procedure. OTP is valid for 5 minutes</p>
+                <p>Thank you for using Banao Social Media Platform. Use the following OTP to complete your Password Recovery Procedure.</p>
                 <h2 style="background: #00466a;margin: 0 auto;width: max-content;padding: 0 10px;color: #fff;border-radius: 4px;">${otpNumber}</h2>
-                <p style="font-size:0.9em;">Regards,<br />Koding 101</p>
+                <p style="font-size:0.9em;">Regards,<br />Team Banao</p>
                 <hr style="border:none;border-top:1px solid #eee" />
                 <div style="float:right;padding:8px 0;color:#aaa;font-size:0.8em;line-height:1;font-weight:300">
-                    <p>Koding 101 Inc</p>
-                    <p>1600 Amphitheatre Parkway</p>
-                    <p>California</p>
+                    <p>Banao Technologies</p>
+                    <p>India</p>
                 </div>
                 </div>
             </div>
