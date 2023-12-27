@@ -174,7 +174,7 @@ async function run() {
                     pass: process.env.gmail_pass,
                 },
             });
-            const resetLink = `http://your-app/reset-password/${resetToken}`;
+            const resetLink = `https://banao-social-media.vercel.app/reset-password/${resetToken}`;
             const mailOptions = {
                 to: mail,
                 subject: 'Password Reset',
