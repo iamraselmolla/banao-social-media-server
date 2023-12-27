@@ -4,6 +4,7 @@ const cors = require('cors');
 const app = express();
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const bcrypt = require('bcryptjs');
 app.use(cors());
 app.use(express.json());
 const port = process.env.PORT || 5000;
@@ -88,8 +89,10 @@ async function run() {
                 return res.status(409).json({ message: 'Already registered' })
             } else {
                 const createdAt = new Date().toDateString()
+                const hashedPassword = await bcrypt.hash(password, 10);
 
-                const result = await usersCollection.insertOne({ username, email, password, createdAt });
+
+                const result = await usersCollection.insertOne({ username, email, password: hashedPassword, createdAt });
                 res.status(200).json({ message: 'Registration succeed', data: result })
             }
 
@@ -99,22 +102,30 @@ async function run() {
         // Login User
         app.post('/login', async (req, res) => {
             const { username, password } = req.body;
-            const findUser = await usersCollection.findOne({ username })
-            if (!findUser) {
-                return res.status(404).json({ message: 'User not found. Please register' })
+
+            try {
+                const findUser = await usersCollection.findOne({ username });
+
+                if (!findUser) {
+                    return res.status(404).json({ message: 'User not found. Please register' });
+                }
+
+                const passwordMatch = await bcrypt.compare(password, findUser.password);
+
+                if (passwordMatch) {
+                    const { username, _id, createdAt, email } = findUser;
+
+                    const newUserData = { username, _id, createdAt, email };
+
+                    res.status(200).json({ message: 'Login successful 👍', data: newUserData, localid: findUser?._id, token: 'null' });
+                } else {
+                    res.status(401).json({ message: 'Wrong Password' });
+                }
+            } catch (error) {
+                console.error('Error during login:', error);
+                res.status(500).json({ message: 'Internal server error' });
             }
-            if (findUser.password === password) {
-                const { username, _id, createdAt, email } = findUser;
-
-                const newUserData = { username, _id, createdAt, email }
-
-                res.status(200).json({ message: 'Login successfull 👍', data: newUserData, localid: findUser?._id, token: 'null' })
-            } else {
-                res.status(401).json({ message: 'Wrong Password' })
-
-            }
-        })
-
+        });
         app.post('/posts', async (req, res) => {
             const data = req.body;
             const result = await postsCollection.insertOne(data);
