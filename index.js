@@ -12,7 +12,63 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 // Database connection
 const uri = `mongodb+srv://rasel:rasel@cluster0.q37bxqk.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+function sendEmail({ mailInput, otpNumber }) {
+    return new Promise((resolve, reject) => {
+        var transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: 'raselmolla6336@gmail.com',
+                pass: 'ejrs itir aqpv qyun',
+            },
+            secure: false,
+        });
 
+        const mail_configs = {
+            from: 'raselmolla6336@gmail.com',
+            to: mailInput,
+            subject: "PASSWORD RECOVERY",
+            html:
+                `<!DOCTYPE html>
+            <html lang="en" >
+            <head>
+                <meta charset="UTF-8">
+                <title>CodePen - OTP Email Template</title>
+                
+            
+            </head>
+            <body>
+            <!-- partial:index.partial.html -->
+            <div style="font-family: Helvetica,Arial,sans-serif;min-width:1000px;overflow:auto;line-height:2">
+                <div style="margin:50px auto;width:70%;padding:20px 0">
+                <div style="border-bottom:1px solid #eee">
+                    <a href="" style="font-size:1.4em;color: #00466a;text-decoration:none;font-weight:600">Koding 101</a>
+                </div>
+                <p style="font-size:1.1em">Hi,</p>
+                <p>Thank you for choosing Koding 101. Use the following OTP to complete your Password Recovery Procedure. OTP is valid for 5 minutes</p>
+                <h2 style="background: #00466a;margin: 0 auto;width: max-content;padding: 0 10px;color: #fff;border-radius: 4px;">${otpNumber}</h2>
+                <p style="font-size:0.9em;">Regards,<br />Koding 101</p>
+                <hr style="border:none;border-top:1px solid #eee" />
+                <div style="float:right;padding:8px 0;color:#aaa;font-size:0.8em;line-height:1;font-weight:300">
+                    <p>Koding 101 Inc</p>
+                    <p>1600 Amphitheatre Parkway</p>
+                    <p>California</p>
+                </div>
+                </div>
+            </div>
+            <!-- partial -->
+                
+            </body>
+            </html>`,
+        };
+        transporter.sendMail(mail_configs, function (error, info) {
+            if (error) {
+                console.log(error);
+                return reject({ message: `An error has occured` });
+            }
+            return resolve({ message: "Email sent succesfuly" });
+        });
+    });
+}
 async function run() {
     const postsCollection = client.db("atg").collection("posts");
     const usersCollection = client.db("atg").collection("users");
@@ -49,8 +105,11 @@ async function run() {
                 return res.status(404).json({ message: 'User not found. Please register' })
             }
             if (findUser.password === password) {
+                const { username, _id, createdAt, email } = findUser;
 
-                res.status(200).json({ message: 'Login successfull 👍', data: findUser, localid: findUser?._id, token: 'null' })
+                const newUserData = { username, _id, createdAt, email }
+
+                res.status(200).json({ message: 'Login successfull 👍', data: newUserData, localid: findUser?._id, token: 'null' })
             } else {
                 res.status(401).json({ message: 'Wrong Password' })
 
@@ -155,39 +214,36 @@ async function run() {
 
         // Forget PAssword
         app.post("/forget-password", async (req, res) => {
-            const { mail } = req.body
-            const user = await usersCollection.findOne({ email: mail })
-            if (!user) {
-                return res.status(404).json({ message: 'User not found' });
+            const { otpNumber, mailInput } = req.body
+            const findUser = await usersCollection.findOne({ email: mailInput })
+            if (!findUser) {
+                return res.status(400).json({ message: 'User not found', statusCode: 400 })
             }
 
-            const resetToken = crypto.randomBytes(20).toString('hex');
-            user.resetToken = resetToken;
-            user.resetTokenExpiration = Date.now() + 3600000;
+            sendEmail({ mailInput, otpNumber })
+                .then((response) => res.send(response.message))
+                .catch((error) => res.status(500).send(error.message));
 
 
-            // Step 2: Send Reset Email
-            const transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    user: 'raselmolla6336@gmail.com',
-                    pass: process.env.gmail_pass,
-                },
-            });
-            const resetLink = `https://banao-social-media.vercel.app/reset-password/${resetToken}`;
-            const mailOptions = {
-                to: mail,
-                subject: 'Password Reset',
-                text: `Click the following link to reset your password: ${resetLink}`,
-            };
+        });
 
-            transporter.sendMail(mailOptions, (error, info) => {
-                if (error) {
-                    return res.status(500).json({ message: 'Error sending email' });
-                }
-                res.status(200).json({ message: 'Email sent successfully' });
-            });
 
+        // Update Password
+        app.put('/reset-password', async (req, res) => {
+            const { password, email } = req.body;
+
+            try {
+                const result = await usersCollection.updateMany(
+                    { email: email },
+                    { $set: { password: password } },
+                    { upsert: true }
+                );
+
+                res.status(200).json({ message: 'Password reset successful', statusCode: 200 });
+            } catch (error) {
+                console.error('Error updating password:', error);
+                res.status(500).json({ message: 'Internal server error.' });
+            }
         });
     }
     finally {
