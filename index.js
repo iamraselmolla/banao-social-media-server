@@ -1,10 +1,11 @@
 require('dotenv').config();
-const express = require('express')
-
-const app = express()
+const express = require('express');
 const cors = require('cors');
-app.use(cors())
-app.use(express.json())
+const app = express();
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+app.use(cors());
+app.use(express.json());
 const port = process.env.PORT || 5000;
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -152,6 +153,42 @@ async function run() {
             }
         });
 
+        // Forget PAssword
+        app.post("/forget-password", async (req, res) => {
+            const { mail } = req.body
+            const user = await usersCollection.findOne({ email: mail })
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            const resetToken = crypto.randomBytes(20).toString('hex');
+            user.resetToken = resetToken;
+            user.resetTokenExpiration = Date.now() + 3600000;
+
+
+            // Step 2: Send Reset Email
+            const transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: 'raselmolla6336@gmail.com',
+                    pass: process.env.gmail_pass,
+                },
+            });
+            const resetLink = `http://your-app/reset-password/${resetToken}`;
+            const mailOptions = {
+                to: mail,
+                subject: 'Password Reset',
+                text: `Click the following link to reset your password: ${resetLink}`,
+            };
+
+            transporter.sendMail(mailOptions, (error, info) => {
+                if (error) {
+                    return res.status(500).json({ message: 'Error sending email' });
+                }
+                res.status(200).json({ message: 'Email sent successfully' });
+            });
+
+        });
     }
     finally {
 
