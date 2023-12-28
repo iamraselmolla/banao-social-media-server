@@ -42,7 +42,7 @@ function sendEmail({ mailInput, otpNumber }) {
             <div style="font-family: Helvetica,Arial,sans-serif;min-width:1000px;overflow:auto;line-height:2">
                 <div style="margin:50px auto;width:70%;padding:20px 0">
                 <div style="border-bottom:1px solid #eee">
-                    <a href="" style="font-size:1.4em;color: #00466a;text-decoration:none;font-weight:600">Koding 101</a>
+                    <a href="" style="font-size:1.4em;color: #00466a;text-decoration:none;font-weight:600">Banao Social Media</a>
                 </div>
                 <p style="font-size:1.1em">Hi,</p>
                 <p>Thank you for using Banao Social Media Platform. Use the following OTP to complete your Password Recovery Procedure.</p>
@@ -241,11 +241,12 @@ async function run() {
         // Update Password
         app.put('/reset-password', async (req, res) => {
             const { password, email } = req.body;
+            const hashedPassword = await bcrypt.hash(password, 10);
 
             try {
                 const result = await usersCollection.updateMany(
                     { email: email },
-                    { $set: { password: password } },
+                    { $set: { password: hashedPassword } },
                     { upsert: true }
                 );
 
